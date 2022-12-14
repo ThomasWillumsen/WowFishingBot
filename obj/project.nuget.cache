@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "s845aw47Ik7FbRXWNqfeWs5hIeVuYh1vVaKH9BNgtTfmHqCSBjYMhn4VYBjLQsB3UyPfY4pyZoMUfrl/R6D0aA==",
+  "dgSpecHash": "uWSPGUm7DlvzuAN8IB2gHCtMxM91LimzeoBpRHqLocsOo2LaJylZ6A0oyffo5CByeqSnyY5m/UvLqgaFccVQFw==",
   "success": true,
-  "projectFilePath": "C:\\Projects\\FishingBot\\FishingBot.csproj",
+  "projectFilePath": "C:\\Projects\\WowFishingBot\\FishingBot.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Thomas\\.nuget\\packages\\cscore\\1.2.1.2\\cscore.1.2.1.2.nupkg.sha512",
     "C:\\Users\\Thomas\\.nuget\\packages\\inputsimulator\\1.0.4\\inputsimulator.1.0.4.nupkg.sha512",
