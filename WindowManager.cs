@@ -12,8 +12,12 @@ public class WindowManager
         _wowProcess = wowProcess;
     }
 
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
@@ -33,10 +37,9 @@ public class WindowManager
         public static extern IntPtr GetWindowRect(IntPtr hWnd, ref Rect rect);
     }
 
-    public void SetToForegroundWindow()
+    public FocusWindowTemporarily WowWindowFocused()
     {
-        var wowWindowHandle = _wowProcess.MainWindowHandle;
-        SetForegroundWindow(wowWindowHandle);
+        return new FocusWindowTemporarily(_wowProcess);
     }
 
     public Tuple<int, int> FindRedPixel()
@@ -67,7 +70,6 @@ public class WindowManager
             graphics.CopyFromScreen(screenshotX, screenshotY, 0, 0, screenshot.Size, CopyPixelOperation.SourceCopy);
         }
 
-        screenshot.Save(@"C:\Users\Thomas\Downloads\wtf\screenshot.png", ImageFormat.Png);
 
         // Y is inverted, meaning that 0,0 is the top left corner
         for (var y = screenshot.Height - 1; y >= 0; y--)
@@ -91,6 +93,39 @@ public class WindowManager
                 }
             }
 
+        // create logs dir if it doesn't exist
+        if (!Directory.Exists("logs"))
+            Directory.CreateDirectory("logs");
+        screenshot.Save($"logs/failed_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png", ImageFormat.Png);
         throw new Exception("No red pixel found");
+    }
+
+
+    public class FocusWindowTemporarily : IDisposable
+    {
+        private readonly bool _isWowAlreadyInForeground;
+
+        public FocusWindowTemporarily(Process wowProcess)
+        {
+            var foregroundWindowHandle = GetForegroundWindow();
+            _isWowAlreadyInForeground = foregroundWindowHandle == wowProcess.MainWindowHandle;
+            SetToForegroundWindow(wowProcess);
+        }
+
+        private void SetToForegroundWindow(Process wowProcess)
+        {
+            var wowWindowHandle = wowProcess.MainWindowHandle;
+            SetForegroundWindow(wowWindowHandle);
+        }
+
+        public void Dispose()
+        {
+            if (!_isWowAlreadyInForeground)
+            {
+                var simulator = new WindowsInput.InputSimulator();
+                // press alt tab to go to previous window
+                simulator.Keyboard.ModifiedKeyStroke(WindowsInput.Native.VirtualKeyCode.LMENU, WindowsInput.Native.VirtualKeyCode.TAB);
+            }
+        }
     }
 }

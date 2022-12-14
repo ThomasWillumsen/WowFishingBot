@@ -4,18 +4,19 @@ using System.Runtime.Versioning;
 using CSCore.CoreAudioAPI;
 using WindowsInput.Native;
 
-[DllImport("user32.dll")]
-static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = false)]
-static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, int lParam);
-
-[DllImport("user32.dll")]
-static extern bool SetCursorPos(int X, int Y);
 
 [SupportedOSPlatform("windows")]
 public class FishingBot
 {
+    // [DllImport("user32.dll")]
+    // private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+    // [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = false)]
+    // private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, int lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int X, int Y);
+
     private Process _wowProcess;
     private WindowManager _windowManager;
     private AudioSessionControl _wowAudioSession;
@@ -30,98 +31,90 @@ public class FishingBot
     public void Start()
     {
         Console.WriteLine("Fishing bot started");
-        Utility.ThreadSleepRandom(100, 150);
-
+        Console.WriteLine("====================================");
         Console.WriteLine("Cast fishing rod");
 
-        _windowManager.SetToForegroundWindow();
-        SetToForegroundWindow(wowProcess);
-        Thread.Sleep(100);
-        PressFishingKey(wowProcess);
+        using (_windowManager.WowWindowFocused())
+        {
+            Utility.ThreadSleepRandom(250, 750);
+            CastFishingRod();
+            Utility.ThreadSleepRandom(200, 400);
+        }
 
         while (true)
         {
-            using (var audioMeterInformation = wowAudioSession.QueryInterface<AudioMeterInformation>())
+            using (var audioMeterInformation = _wowAudioSession.QueryInterface<AudioMeterInformation>())
             {
                 var peakVolume = audioMeterInformation.GetPeakValue() * 100;
-                Console.WriteLine(peakVolume);
-
-                if (peakVolume < 3)
+                if (peakVolume < 2.7)
                     continue;
 
-                Console.WriteLine("Fish detected");
-                Console.WriteLine("Waiting for 500-1000ms (random)");
+                Console.WriteLine("Possible fish detected");
+                Utility.ThreadSleepRandom(250, 750);
 
-                var random = new Random();
-                var randomTime = random.Next(500, 1000);
-                System.Threading.Thread.Sleep(randomTime);
-
-                Console.WriteLine("Reeling in fish");
-                // SetToForegroundWindow(wowProcess);
-                Thread.Sleep(100);
-
-                try
+                using (_windowManager.WowWindowFocused())
                 {
-                    PressFishingKey(wowProcess, true);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
+                    Utility.ThreadSleepRandom(250, 750);
+                    try
+                    {
+                        ReelInFish();
+                        Utility.ThreadSleepRandom(500, 1500);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
 
-                Console.WriteLine("Fishing rod reeled in");
-                Thread.Sleep(1000);
-
-                PressFishingKey(wowProcess);
-                Console.WriteLine("Recast fishing rod");
+                    Console.WriteLine("====================================");
+                    Console.WriteLine("Recast fishing rod");
+                    CastFishingRod();
+                    Utility.ThreadSleepRandom(200, 400);
+                }
             }
 
+            // wait 100ms before checking volume again
             System.Threading.Thread.Sleep(100);
         }
     }
-    // Console.ReadKey();
 
-    static void SetToForegroundWindow(Process wowProcess)
+    private void CastFishingRod()
     {
-        var wowWindowHandle = wowProcess.MainWindowHandle;
-        SetForegroundWindow(wowWindowHandle);
+        var simulator = new WindowsInput.InputSimulator();
+        simulator.Keyboard.KeyDown(VirtualKeyCode.F4);
+        simulator.Keyboard.SleepRandom(70, 150);
+        simulator.Keyboard.KeyUp(VirtualKeyCode.F4);
+
+        // keybd_event(0x73, 0, 0x0000, (UIntPtr)0);
+        // Thread.Sleep(150);
+        // keybd_event(0x73, 0, 0x0002, (UIntPtr)0);
     }
 
-    static void PressFishingKey(Process wowProcess, bool reel = false)
+    private void ReelInFish()
     {
-        if (reel == false)
-        {
-            var simulator = new WindowsInput.InputSimulator();
-            simulator.Keyboard.KeyDown(VirtualKeyCode.F4);
-            // keybd_event(0x73, 0, 0x0000, (UIntPtr)0);
-            simulator.Keyboard.Sleep(120);
-            // Thread.Sleep(150);
-            simulator.Keyboard.KeyUp(VirtualKeyCode.F4);
-            // keybd_event(0x73, 0, 0x0002, (UIntPtr)0);
-        }
-        else
-        {
-            var redPixel = WindowManager.FindRedPixel(wowProcess);
+        Console.WriteLine("Reeling in fish");
+        var redPixel = _windowManager.FindRedPixel();
 
-            // move mouse to red pixel
-            var x = redPixel.Item1;
-            var y = redPixel.Item2;
+        // move mouse to red pixel
+        var x = redPixel.Item1;
+        var y = redPixel.Item2;
 
-            SetCursorPos(x, y);
+        SetCursorPos(x, y);
 
-            Thread.Sleep(150);
+        Utility.ThreadSleepRandom(120, 170);
 
-            var simulator = new WindowsInput.InputSimulator();
-            // simulator.Keyboard.KeyDown(VirtualKeyCode.OEM_PLUS);
-            simulator.Mouse.RightButtonDown();
-            simulator.Mouse.Sleep(120);
-            simulator.Mouse.RightButtonUp();
-            // simulator.Keyboard.Sleep(120);
-            // keybd_event(0xBB, 0, 0x0000, (UIntPtr)0);
-            // Thread.Sleep(120);
-            // simulator.Keyboard.KeyUp(VirtualKeyCode.OEM_PLUS);
-            // keybd_event(0xBB, 0, 0x0002, (UIntPtr)0);
-        }
+        var simulator = new WindowsInput.InputSimulator();
+        simulator.Mouse.RightButtonDown();
+        simulator.Mouse.Sleep(120);
+        simulator.Mouse.RightButtonUp();
+
+        Console.WriteLine("Fish reeled in");
+
+        // simulator.Keyboard.KeyDown(VirtualKeyCode.OEM_PLUS);
+        // simulator.Keyboard.Sleep(120);
+        // keybd_event(0xBB, 0, 0x0000, (UIntPtr)0);
+        // Thread.Sleep(120);
+        // simulator.Keyboard.KeyUp(VirtualKeyCode.OEM_PLUS);
+        // keybd_event(0xBB, 0, 0x0002, (UIntPtr)0);
     }
 
     private AudioSessionControl GetWowAudioSession()
