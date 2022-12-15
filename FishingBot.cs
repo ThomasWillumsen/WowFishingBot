@@ -1,11 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using CSCore.CoreAudioAPI;
 using WindowsInput.Native;
 
 
-[SupportedOSPlatform("windows")]
 public class FishingBot
 {
     // [DllImport("user32.dll")]
@@ -91,13 +89,14 @@ public class FishingBot
 
     private void ReelInFish()
     {
-        Console.WriteLine("Reeling in fish");
-        var redPixel = _windowManager.FindRedPixel();
+        Console.WriteLine("Locating fishing bobber");
+        var bobberCoordinates = _windowManager.LocateFishingBobber();
 
         // move mouse to red pixel
-        var x = redPixel.Item1;
-        var y = redPixel.Item2;
+        var x = bobberCoordinates.Item1;
+        var y = bobberCoordinates.Item2;
 
+        Console.WriteLine("Reeling in fish");
         SetCursorPos(x, y);
 
         Utility.ThreadSleepRandom(120, 170);

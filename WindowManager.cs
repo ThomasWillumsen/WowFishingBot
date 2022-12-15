@@ -42,7 +42,7 @@ public class WindowManager
         return new FocusWindowTemporarily(_wowProcess);
     }
 
-    public Tuple<int, int> FindRedPixel()
+    public Tuple<int, int> LocateFishingBobber()
     {
         var applicationRect = new User32.Rect();
         User32.GetWindowRect(_wowProcess.MainWindowHandle, ref applicationRect);
@@ -77,8 +77,10 @@ public class WindowManager
             {
                 {
                     var pixel = screenshot.GetPixel(x, y);
-                    // 140 +-10, 50 +-10, 25+-5
-                    if (pixel.R > 130 && pixel.R < 150 && pixel.G > 40 && pixel.G < 60 && pixel.B > 20 && pixel.B < 35)
+                    var hue = pixel.GetHue();
+
+                    // check if hue is reddish
+                    if (hue > 345 || hue < 15)
                     {
                         var applicationScreenXModifier = ((decimal)applicationWidth / 2560);
                         var applicationScreenYModifier = ((decimal)applicationHeight / 1440);
@@ -86,7 +88,7 @@ public class WindowManager
                         var screenX = (int)((x + 2560 / 2 - 450) * applicationScreenXModifier);
                         var screenY = (int)((y + 1440 / 2 - 500) * applicationScreenYModifier);
 
-                        Console.WriteLine($"Found pixel at ({x},{y}) ({screenX},{screenY}) with rgba: ({pixel.R}, {pixel.G}, {pixel.B})");
+                        Console.WriteLine($"Found pixel at ({x},{y}) ({screenX},{screenY}) with hue: ({hue})");
 
                         return new Tuple<int, int>(screenX, screenY);
                     }
