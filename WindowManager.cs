@@ -78,9 +78,11 @@ public class WindowManager
                 {
                     var pixel = screenshot.GetPixel(x, y);
                     var hue = pixel.GetHue();
+                    var saturation = pixel.GetSaturation();
+                    var brightness = pixel.GetBrightness();
 
                     // check if hue is reddish
-                    if (hue > 345 || hue < 15)
+                    if ((hue > 345 || hue < 15) && saturation > 0.5)
                     {
                         var applicationScreenXModifier = ((decimal)applicationWidth / 2560);
                         var applicationScreenYModifier = ((decimal)applicationHeight / 1440);
@@ -88,7 +90,7 @@ public class WindowManager
                         var screenX = (int)((x + 2560 / 2 - 450) * applicationScreenXModifier);
                         var screenY = (int)((y + 1440 / 2 - 500) * applicationScreenYModifier);
 
-                        Console.WriteLine($"Found pixel at ({x},{y}) ({screenX},{screenY}) with hue: ({hue})");
+                        Console.WriteLine($"Possible fish bobber located at ({screenX}, {screenY}) with HSL: ({hue}, {saturation}, {brightness})");
 
                         return new Tuple<int, int>(screenX, screenY);
                     }
