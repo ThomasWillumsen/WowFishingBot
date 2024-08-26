@@ -19,9 +19,6 @@ public class WindowManager
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
     private class User32
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -47,27 +44,22 @@ public class WindowManager
         var applicationRect = new User32.Rect();
         User32.GetWindowRect(_wowProcess.MainWindowHandle, ref applicationRect);
 
+        var screenWidth = 2560;
+        var screenHeight = 1440;
         var applicationWidth = applicationRect.right - applicationRect.left;
         var applicationHeight = applicationRect.bottom - applicationRect.top;
+        var applicationScreenModifierX = (decimal)applicationWidth / screenWidth;
+        var applicationScreenModifierY = (decimal)applicationHeight / screenHeight;
 
-        // // get the center 900x900 of the rect
-        // Console.WriteLine("Rect: " + rect.left + ", " + rect.top + ", " + rect.right + ", " + rect.bottom);
+        var screenshotWidth = 900;
+        var screenshotHeight = 500;
+        var screenshotStartX = screenWidth / 2 - (screenshotWidth / 2); // horizontally center the screenshot
+        var screenshotStartY = screenHeight / 2 - screenshotHeight; // vertically above the center. The bottom ends at the center of the screen
 
-        // var x = (rect.left + rect.right) / 2 - 450;
-        // var y = (rect.top + rect.bottom) / 2 - 450;
-        // var width = 900;
-        // var height = 900;
-
-        var screenshotX = 2560 / 2 - 450;
-        var screenshotY = 1440 / 2 - 500;
-
-        var width = 900;
-        var height = 500;
-
-        var screenshot = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        var screenshot = new Bitmap(screenshotWidth, screenshotHeight, PixelFormat.Format32bppArgb);
         using (var graphics = Graphics.FromImage(screenshot))
         {
-            graphics.CopyFromScreen(screenshotX, screenshotY, 0, 0, screenshot.Size, CopyPixelOperation.SourceCopy);
+            graphics.CopyFromScreen(screenshotStartX, screenshotStartY, 0, 0, screenshot.Size, CopyPixelOperation.SourceCopy);
         }
 
 
@@ -75,25 +67,20 @@ public class WindowManager
         for (var y = screenshot.Height - 1; y >= 0; y--)
             for (var x = 0; x < screenshot.Width; x++)
             {
+                var pixel = screenshot.GetPixel(x, y);
+                var hue = pixel.GetHue();
+                var saturation = pixel.GetSaturation();
+                var brightness = pixel.GetBrightness();
+
+                // check if hue is reddish
+                if ((hue > 345 || hue < 15) && saturation > 0.5)
                 {
-                    var pixel = screenshot.GetPixel(x, y);
-                    var hue = pixel.GetHue();
-                    var saturation = pixel.GetSaturation();
-                    var brightness = pixel.GetBrightness();
+                    var screenX = (int)((x + screenshotStartX) * applicationScreenModifierX);
+                    var screenY = (int)((y + screenshotStartY) * applicationScreenModifierY);
 
-                    // check if hue is reddish
-                    if ((hue > 345 || hue < 15) && saturation > 0.5)
-                    {
-                        var applicationScreenXModifier = ((decimal)applicationWidth / 2560);
-                        var applicationScreenYModifier = ((decimal)applicationHeight / 1440);
+                    Console.WriteLine($"Possible fish bobber located at ({screenX}, {screenY}) with HSL: ({hue}, {saturation}, {brightness})");
 
-                        var screenX = (int)((x + 2560 / 2 - 450) * applicationScreenXModifier);
-                        var screenY = (int)((y + 1440 / 2 - 500) * applicationScreenYModifier);
-
-                        Console.WriteLine($"Possible fish bobber located at ({screenX}, {screenY}) with HSL: ({hue}, {saturation}, {brightness})");
-
-                        return new Tuple<int, int>(screenX, screenY);
-                    }
+                    return new Tuple<int, int>(screenX, screenY);
                 }
             }
 
@@ -124,10 +111,10 @@ public class WindowManager
 
         public void Dispose()
         {
+            // if wow was not in foreground, alt tab back to previous window
             if (!_isWowAlreadyInForeground)
             {
                 var simulator = new WindowsInput.InputSimulator();
-                // press alt tab to go to previous window
                 simulator.Keyboard.ModifiedKeyStroke(WindowsInput.Native.VirtualKeyCode.LMENU, WindowsInput.Native.VirtualKeyCode.TAB);
             }
         }

@@ -15,4 +15,11 @@ public static class Utility
         var randomTime = random.Next(minMs, maxMs);
         simulator.Sleep(randomTime);
     }
+
+    public static void SleepRandom(this IMouseSimulator simulator, int minMs, int maxMs)
+    {
+        var random = new Random();
+        var randomTime = random.Next(minMs, maxMs);
+        simulator.Sleep(randomTime);
+    }
 }

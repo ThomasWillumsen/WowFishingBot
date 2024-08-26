@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using CSCore.CoreAudioAPI;
 using WindowsInput.Native;
@@ -6,14 +7,11 @@ using WindowsInput.Native;
 
 public class FishingBot
 {
-    // [DllImport("user32.dll")]
-    // private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-    // [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = false)]
-    // private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, int lParam);
-
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int X, int Y);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out Point lpPoint);
 
     private Process _wowProcess;
     private WindowManager _windowManager;
@@ -56,13 +54,13 @@ public class FishingBot
                     try
                     {
                         ReelInFish();
-                        Utility.ThreadSleepRandom(500, 1500);
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e.Message);
                     }
 
+                    Utility.ThreadSleepRandom(500, 1500);
                     Console.WriteLine("====================================");
                     Console.WriteLine("Recast fishing rod");
                     CastFishingRod();
@@ -71,20 +69,16 @@ public class FishingBot
             }
 
             // wait 100ms before checking volume again
-            System.Threading.Thread.Sleep(100);
+            Thread.Sleep(100);
         }
     }
 
     private void CastFishingRod()
     {
         var simulator = new WindowsInput.InputSimulator();
-        simulator.Keyboard.KeyDown(VirtualKeyCode.F4);
-        simulator.Keyboard.SleepRandom(70, 150);
-        simulator.Keyboard.KeyUp(VirtualKeyCode.F4);
-
-        // keybd_event(0x73, 0, 0x0000, (UIntPtr)0);
-        // Thread.Sleep(150);
-        // keybd_event(0x73, 0, 0x0002, (UIntPtr)0);
+        simulator.Keyboard.KeyDown(VirtualKeyCode.F3);
+        simulator.Keyboard.SleepRandom(50, 90);
+        simulator.Keyboard.KeyUp(VirtualKeyCode.F3);
     }
 
     private void ReelInFish()
@@ -93,27 +87,49 @@ public class FishingBot
         var bobberCoordinates = _windowManager.LocateFishingBobber();
 
         // move mouse to red pixel
-        var x = bobberCoordinates.Item1;
-        var y = bobberCoordinates.Item2;
+        var bobberX = bobberCoordinates.Item1;
+        var bobberY = bobberCoordinates.Item2;
 
         Console.WriteLine("Reeling in fish");
-        SetCursorPos(x, y);
 
-        Utility.ThreadSleepRandom(120, 170);
+        GetCursorPos(out Point currentMousePosition);
+        Console.WriteLine($"Current mouse position: ({currentMousePosition.X}, {currentMousePosition.Y})");
+        Console.WriteLine($"Bobber position: ({bobberX}, {bobberY})");
+
+        var steps = 30;
+        var mouseMovementTimeInMs = 200;
+
+        var xPixelsToMove = bobberX - currentMousePosition.X;
+
+        // Define control points for the Bezier curve
+        Point startPoint = currentMousePosition;
+        Point endPoint = new Point { X = bobberX, Y = bobberY };
+        var controlPointModifierXPercentage = Math.Abs((decimal)xPixelsToMove / 10 / 100); // 1000 pixels = 100%
+        var controlPointModifierY = new Random().Next(-100, 100) * controlPointModifierXPercentage;
+        Point controlPoint = new Point { X = (startPoint.X + endPoint.X) / 2, Y = startPoint.Y + (int)controlPointModifierY }; // Adjust control point as needed
+
+        for (var i = 0; i <= steps; i++)
+        {
+            double t = (double)i / steps;
+            double u = 1 - t;
+            double tt = t * t;
+            double uu = u * u;
+
+            int x = (int)(uu * startPoint.X + 2 * u * t * controlPoint.X + tt * endPoint.X);
+            int y = (int)(uu * startPoint.Y + 2 * u * t * controlPoint.Y + tt * endPoint.Y);
+
+            SetCursorPos(x, y);
+            Thread.Sleep(mouseMovementTimeInMs / steps);
+        }
+
+        Utility.ThreadSleepRandom(220, 570);
 
         var simulator = new WindowsInput.InputSimulator();
         simulator.Mouse.RightButtonDown();
-        simulator.Mouse.Sleep(120);
+        simulator.Mouse.SleepRandom(55, 135);
         simulator.Mouse.RightButtonUp();
 
         Console.WriteLine("Fish reeled in");
-
-        // simulator.Keyboard.KeyDown(VirtualKeyCode.OEM_PLUS);
-        // simulator.Keyboard.Sleep(120);
-        // keybd_event(0xBB, 0, 0x0000, (UIntPtr)0);
-        // Thread.Sleep(120);
-        // simulator.Keyboard.KeyUp(VirtualKeyCode.OEM_PLUS);
-        // keybd_event(0xBB, 0, 0x0002, (UIntPtr)0);
     }
 
     private AudioSessionControl GetWowAudioSession()
