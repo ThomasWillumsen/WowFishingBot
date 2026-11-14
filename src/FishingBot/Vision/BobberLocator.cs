@@ -6,6 +6,9 @@ using DeskHelper.Windowing;
 
 namespace DeskHelper.Vision;
 
+/// <summary>Where the bobber is on screen (center, in screen coordinates) and roughly how big it is.</summary>
+internal readonly record struct BobberInfo(Point Center, double Radius);
+
 /// <summary>Finds the fishing bobber by looking for reddish pixels in the area just above the screen center.</summary>
 internal sealed class BobberLocator(WowWindow window)
 {
@@ -19,8 +22,11 @@ internal sealed class BobberLocator(WowWindow window)
 
     private readonly record struct Blob(Point Center, double Radius);
 
-    /// <summary>Returns a click position on the bobber in screen coordinates: its center plus a small random offset.</summary>
-    public Point Locate()
+    /// <summary>
+    /// Looks for the bobber and returns its center (in screen coordinates) and approximate radius, or null if none was found.
+    /// A failed search can optionally save the capture to the logs folder for inspection.
+    /// </summary>
+    public BobberInfo? Find(bool saveFailedCapture = false)
     {
         var client = window.GetClientAreaOnScreen();
         var captureSize = new Size(
@@ -31,34 +37,37 @@ internal sealed class BobberLocator(WowWindow window)
         // horizontally centered, vertically above the center: the bottom edge ends at the center of the game window
         var captureOrigin = new Point(center.X - captureSize.Width / 2, center.Y - captureSize.Height);
 
-        Log.Info($"Capturing {captureSize.Width}x{captureSize.Height} at ({captureOrigin.X}, {captureOrigin.Y}) around window center ({center.X}, {center.Y})");
+        Log.Debug($"Capturing {captureSize.Width}x{captureSize.Height} at ({captureOrigin.X}, {captureOrigin.Y}) around window center ({center.X}, {center.Y})");
 
         using var screenshot = Capture(captureOrigin, captureSize);
 
         if (TryFindBobber(screenshot, out var blob, out var hue, out var saturation, out var brightness))
         {
-            var clickOffset = RandomOffset(blob.Radius);
-            var inCapture = new Point(blob.Center.X + clickOffset.X, blob.Center.Y + clickOffset.Y);
-            var screenPosition = new Point(captureOrigin.X + inCapture.X, captureOrigin.Y + inCapture.Y);
-            Log.Info($"Possible fish bobber located at ({screenPosition.X}, {screenPosition.Y}), radius ~{blob.Radius:F0}px, seed HSL: ({hue}, {saturation}, {brightness})");
+            var screenCenter = new Point(captureOrigin.X + blob.Center.X, captureOrigin.Y + blob.Center.Y);
+            Log.Info($"Possible fish bobber located at ({screenCenter.X}, {screenCenter.Y}), radius ~{blob.Radius:F0}px, seed HSL: ({hue}, {saturation}, {brightness})");
 
             if (Log.IsDebugEnabled)
-                SaveSuccessScreenshot(screenshot, inCapture);
+                SaveSuccessScreenshot(screenshot, blob.Center);
 
-            return screenPosition;
+            return new BobberInfo(screenCenter, blob.Radius);
         }
 
-        Directory.CreateDirectory(LogDirectory);
-        screenshot.Save(Path.Combine(LogDirectory, $"failed_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png"), ImageFormat.Png);
-        throw new InvalidOperationException("No red pixel found");
+        if (saveFailedCapture)
+        {
+            Directory.CreateDirectory(LogDirectory);
+            screenshot.Save(Path.Combine(LogDirectory, $"failed_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png"), ImageFormat.Png);
+        }
+
+        return null;
     }
 
-    private static Point RandomOffset(double radius)
+    /// <summary>A click position on the bobber: its center plus a small random offset.</summary>
+    public static Point PickClickPoint(BobberInfo bobber)
     {
-        var limit = radius * 0.6;
-        var x = Math.Clamp(RandomDelay.Gaussian(0, radius * 0.25), -limit, limit);
-        var y = Math.Clamp(RandomDelay.Gaussian(0, radius * 0.25), -limit, limit);
-        return new Point((int)Math.Round(x), (int)Math.Round(y));
+        var limit = bobber.Radius * 0.6;
+        var x = Math.Clamp(RandomDelay.Gaussian(0, bobber.Radius * 0.25), -limit, limit);
+        var y = Math.Clamp(RandomDelay.Gaussian(0, bobber.Radius * 0.25), -limit, limit);
+        return new Point(bobber.Center.X + (int)Math.Round(x), bobber.Center.Y + (int)Math.Round(y));
     }
 
     private static Bitmap Capture(Point origin, Size size)

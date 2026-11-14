@@ -14,9 +14,13 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "FISHINGBOT_DEBUG": "false",
+                "FISHINGBOT_DEBUG": "true",
                 // alt-tab back to the previous window after each action (off by default)
-                "FISHINGBOT_ALT_TAB": "false"
+                "FISHINGBOT_ALT_TAB": "false",
+                // also require a bite sound before reeling in (off by default, bobber movement only)
+                "FISHINGBOT_USE_AUDIO": "false",
+                // click the bobber only if the cursor changed when hovering it (on by default)
+                "FISHINGBOT_CURSOR_CHECK": "true"
             },
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "externalTerminal",

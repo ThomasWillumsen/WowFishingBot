@@ -43,6 +43,13 @@ internal static class CursorMover
         MoveSegment(start, target, duration, curve: RandomDelay.Gaussian(0.07, 0.03));
     }
 
+    /// <summary>The handle of the cursor currently shown. It changes when the game swaps the cursor, e.g. over something interactable.</summary>
+    public static IntPtr GetCursorHandle()
+    {
+        var info = new NativeMethods.CursorInfo { Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.CursorInfo>() };
+        return NativeMethods.GetCursorInfo(ref info) ? info.Handle : IntPtr.Zero;
+    }
+
     private static double MovementTimeMs(double distance, int targetWidth)
     {
         var fitts = 150 + 110 * Math.Log2(distance / targetWidth + 1);
