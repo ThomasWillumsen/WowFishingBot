@@ -45,6 +45,7 @@ internal sealed class Worker : IDisposable
     private DateTime _lastCastTime = DateTime.MinValue;
     private BobberInfo _bobber;
     private int _locateFailuresInARow;
+    private double _biteMovementPercent;
 
     public Worker()
     {
@@ -128,6 +129,7 @@ internal sealed class Worker : IDisposable
                 if (visual.Update(change))
                 {
                     lastVisualSpike = now;
+                    _biteMovementPercent = change;
                     Log.Debug($"Bobber change: {change:F1}% of pixels (background {visual.Baseline:F1}%)");
                 }
                 else if (change >= QuietChangeLogFloorPercent)
@@ -264,7 +266,7 @@ internal sealed class Worker : IDisposable
 
         _input.RightClick();
 
-        Log.Info("Fish reeled in");
+        Log.Catch($"Fish reeled in (bobber movement: {_biteMovementPercent:F1}% of pixels)");
 
         if (RandomDelay.Chance(ParkCursorChance))
         {
