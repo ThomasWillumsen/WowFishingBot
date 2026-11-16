@@ -11,10 +11,13 @@ internal static class Log
 
     public static void Info(string message) => Console.WriteLine(message);
 
-    /// <summary>Writes the message to the console and appends it, timestamped, to logs/catches.log.</summary>
+    /// <summary>Writes the message to the console and, in debug mode only, appends it timestamped to logs/catches.log.</summary>
     public static void Catch(string message)
     {
         Info(message);
+
+        if (!IsDebugEnabled)
+            return;
 
         try
         {
