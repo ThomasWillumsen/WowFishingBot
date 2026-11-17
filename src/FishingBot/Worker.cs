@@ -12,7 +12,7 @@ internal sealed class Worker : IDisposable
 {
     private const double FishThresholdPercent = 10; // often hits 13-15 with 100% master volume and sound
     private const double SoundSpikeFactor = 2.5; // a bite sound must also be this many times louder than the recent background
-    private const double MinChangedPercent = 4; // % of the pixels around the bobber that must change for a visible bite
+    private const double MinChangedPercent = 8; // % of the pixels around the bobber that must change for a visible bite
     private const double VisualSpikeFactor = 3;
     private const double QuietSoundLogFloorPercent = 0.5;
     private const double QuietChangeLogFloorPercent = 0.5;
